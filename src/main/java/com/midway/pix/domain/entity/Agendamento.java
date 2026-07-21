@@ -1,0 +1,216 @@
+package com.midway.pix.domain.entity;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.Objects;
+import java.util.UUID;
+
+public class Agendamento {
+
+    private final UUID id;
+    private final String chaveIdempotencia;
+    private final String identificadorPagador;
+    private final String chavePixRecebedor;
+    private final BigDecimal valor;
+    private final String descricao;
+    private final Periodicidade periodicidade;
+    private final LocalDate dataPrimeiroPagamento;
+    private final LocalDate dataFim;
+    private final Instant criadoEm;
+
+    private StatusAgendamento status;
+    private StatusRisco statusRisco;
+    private Instant atualizadoEm;
+    private Instant analisadoEm;
+
+    public Agendamento(
+            UUID id,
+            String chaveIdempotencia,
+            String identificadorPagador,
+            String chavePixRecebedor,
+            BigDecimal valor,
+            String descricao,
+            Periodicidade periodicidade,
+            LocalDate dataPrimeiroPagamento,
+            LocalDate dataFim,
+            StatusAgendamento status,
+            StatusRisco statusRisco,
+            Instant criadoEm,
+            Instant atualizadoEm,
+            Instant analisadoEm
+    ) {
+        this.id = Objects.requireNonNull(id, "id não pode ser nulo");
+        this.chaveIdempotencia = validarTexto(chaveIdempotencia, "chaveIdempotencia");
+        this.identificadorPagador = validarTexto(identificadorPagador, "identificadorPagador");
+        this.chavePixRecebedor = validarTexto(chavePixRecebedor, "chavePixRecebedor");
+        this.valor = validarValor(valor);
+        this.descricao = descricao;
+        this.periodicidade = Objects.requireNonNull(periodicidade, "periodicidade não pode ser nula");
+        this.dataPrimeiroPagamento = Objects.requireNonNull(
+                dataPrimeiroPagamento,
+                "dataPrimeiroPagamento não pode ser nula"
+        );
+        this.dataFim = dataFim;
+        this.status = Objects.requireNonNull(status, "status não pode ser nulo");
+        this.statusRisco = Objects.requireNonNull(statusRisco, "statusRisco não pode ser nulo");
+        this.criadoEm = Objects.requireNonNull(criadoEm, "criadoEm não pode ser nulo");
+        this.atualizadoEm = Objects.requireNonNull(atualizadoEm, "atualizadoEm não pode ser nulo");
+        this.analisadoEm = analisadoEm;
+
+        if (dataFim != null && dataFim.isBefore(dataPrimeiroPagamento)) {
+            throw new IllegalArgumentException("dataFim não pode ser anterior ao primeiro pagamento");
+        }
+    }
+
+    public static Agendamento criar(
+            UUID id,
+            String chaveIdempotencia,
+            String identificadorPagador,
+            String chavePixRecebedor,
+            BigDecimal valor,
+            String descricao,
+            Periodicidade periodicidade,
+            LocalDate dataPrimeiroPagamento,
+            LocalDate dataFim,
+            Instant criadoEm
+    ) {
+        return new Agendamento(
+                id,
+                chaveIdempotencia,
+                identificadorPagador,
+                chavePixRecebedor,
+                valor,
+                descricao,
+                periodicidade,
+                dataPrimeiroPagamento,
+                dataFim,
+                StatusAgendamento.PENDENTE_ANALISE,
+                StatusRisco.PENDENTE,
+                criadoEm,
+                criadoEm,
+                null
+        );
+    }
+
+    public void registrarAnalise(StatusRisco resultado, Instant analisadoEm) {
+        Objects.requireNonNull(resultado, "resultado da análise não pode ser nulo");
+        if (resultado == StatusRisco.PENDENTE) {
+            throw new IllegalArgumentException("resultado da análise não pode ser PENDENTE");
+        }
+
+        this.statusRisco = resultado;
+        this.status = switch (resultado) {
+            case APROVADO -> StatusAgendamento.ATIVO;
+            case REJEITADO -> StatusAgendamento.REJEITADO;
+            case REVISAO_MANUAL -> StatusAgendamento.PENDENTE_ANALISE;
+            case PENDENTE -> throw new IllegalStateException("status de risco inválido");
+        };
+        this.analisadoEm = validarInstante(analisadoEm);
+        this.atualizadoEm = this.analisadoEm;
+    }
+
+    public void pausar(Instant atualizadoEm) {
+        alterarStatus(StatusAgendamento.PAUSADO, atualizadoEm);
+    }
+
+    public void reativar(Instant atualizadoEm) {
+        if (statusRisco != StatusRisco.APROVADO) {
+            throw new IllegalStateException("somente agendamentos aprovados podem ser reativados");
+        }
+        alterarStatus(StatusAgendamento.ATIVO, atualizadoEm);
+    }
+
+    public void cancelar(Instant atualizadoEm) {
+        alterarStatus(StatusAgendamento.CANCELADO, atualizadoEm);
+    }
+
+    public void concluir(Instant atualizadoEm) {
+        alterarStatus(StatusAgendamento.CONCLUIDO, atualizadoEm);
+    }
+
+    private void alterarStatus(StatusAgendamento novoStatus, Instant atualizadoEm) {
+        this.status = novoStatus;
+        this.atualizadoEm = validarInstante(atualizadoEm);
+    }
+
+    private Instant validarInstante(Instant instante) {
+        Objects.requireNonNull(instante, "instante de auditoria não pode ser nulo");
+        if (instante.isBefore(criadoEm)) {
+            throw new IllegalArgumentException("instante de auditoria não pode ser anterior à criação");
+        }
+        return instante;
+    }
+
+    private static String validarTexto(String valor, String campo) {
+        Objects.requireNonNull(valor, campo + " não pode ser nulo");
+        if (valor.isBlank()) {
+            throw new IllegalArgumentException(campo + " não pode estar vazio");
+        }
+        return valor;
+    }
+
+    private static BigDecimal validarValor(BigDecimal valor) {
+        Objects.requireNonNull(valor, "valor não pode ser nulo");
+        if (valor.signum() <= 0) {
+            throw new IllegalArgumentException("valor deve ser maior que zero");
+        }
+        return valor;
+    }
+
+    public UUID getId() {
+        return id;
+    }
+
+    public String getChaveIdempotencia() {
+        return chaveIdempotencia;
+    }
+
+    public String getIdentificadorPagador() {
+        return identificadorPagador;
+    }
+
+    public String getChavePixRecebedor() {
+        return chavePixRecebedor;
+    }
+
+    public BigDecimal getValor() {
+        return valor;
+    }
+
+    public String getDescricao() {
+        return descricao;
+    }
+
+    public Periodicidade getPeriodicidade() {
+        return periodicidade;
+    }
+
+    public LocalDate getDataPrimeiroPagamento() {
+        return dataPrimeiroPagamento;
+    }
+
+    public LocalDate getDataFim() {
+        return dataFim;
+    }
+
+    public StatusAgendamento getStatus() {
+        return status;
+    }
+
+    public StatusRisco getStatusRisco() {
+        return statusRisco;
+    }
+
+    public Instant getCriadoEm() {
+        return criadoEm;
+    }
+
+    public Instant getAtualizadoEm() {
+        return atualizadoEm;
+    }
+
+    public Instant getAnalisadoEm() {
+        return analisadoEm;
+    }
+}

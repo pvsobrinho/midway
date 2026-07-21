@@ -21,6 +21,7 @@ public record AgendamentoResponse(
         LocalDate dataFim,
         StatusAgendamento status,
         StatusRisco statusRisco,
+        String motivoAnalise,
         Instant criadoEm,
         Instant atualizadoEm,
         Instant analisadoEm,

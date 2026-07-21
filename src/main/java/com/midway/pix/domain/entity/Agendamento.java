@@ -21,6 +21,7 @@ public class Agendamento {
 
     private StatusAgendamento status;
     private StatusRisco statusRisco;
+    private String motivoAnalise;
     private Instant atualizadoEm;
     private Instant analisadoEm;
 
@@ -36,6 +37,7 @@ public class Agendamento {
             LocalDate dataFim,
             StatusAgendamento status,
             StatusRisco statusRisco,
+            String motivoAnalise,
             Instant criadoEm,
             Instant atualizadoEm,
             Instant analisadoEm
@@ -54,6 +56,7 @@ public class Agendamento {
         this.dataFim = dataFim;
         this.status = Objects.requireNonNull(status, "status não pode ser nulo");
         this.statusRisco = Objects.requireNonNull(statusRisco, "statusRisco não pode ser nulo");
+        this.motivoAnalise = motivoAnalise;
         this.criadoEm = Objects.requireNonNull(criadoEm, "criadoEm não pode ser nulo");
         this.atualizadoEm = Objects.requireNonNull(atualizadoEm, "atualizadoEm não pode ser nulo");
         this.analisadoEm = analisadoEm;
@@ -87,19 +90,21 @@ public class Agendamento {
                 dataFim,
                 StatusAgendamento.PENDENTE_ANALISE,
                 StatusRisco.PENDENTE,
+                null,
                 criadoEm,
                 criadoEm,
                 null
         );
     }
 
-    public void registrarAnalise(StatusRisco resultado, Instant analisadoEm) {
+    public void registrarAnalise(StatusRisco resultado, String motivoAnalise, Instant analisadoEm) {
         Objects.requireNonNull(resultado, "resultado da análise não pode ser nulo");
         if (resultado == StatusRisco.PENDENTE) {
             throw new IllegalArgumentException("resultado da análise não pode ser PENDENTE");
         }
 
         this.statusRisco = resultado;
+        this.motivoAnalise = validarTexto(motivoAnalise, "motivoAnalise");
         this.status = switch (resultado) {
             case APROVADO -> StatusAgendamento.ATIVO;
             case REJEITADO -> StatusAgendamento.REJEITADO;
@@ -200,6 +205,10 @@ public class Agendamento {
 
     public StatusRisco getStatusRisco() {
         return statusRisco;
+    }
+
+    public String getMotivoAnalise() {
+        return motivoAnalise;
     }
 
     public Instant getCriadoEm() {

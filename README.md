@@ -18,3 +18,10 @@ API REST para pagamentos Pix recorrentes.
 ```bash
 mvn spring-boot:run
 ```
+
+## Endpoints
+
+- `POST /v1/agendamentos`
+- `GET /v1/agendamentos/{id}`
+
+O endpoint de criação exige o header `Idempotency-Key`. Os agendamentos são persistidos em `data/agendamentos.json`.

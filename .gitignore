@@ -1,0 +1,23 @@
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+
+### Maven ###
+target/
+.flattened-pom.xml
+
+### Java ###
+*.class
+*.log
+hs_err_pid*
+
+### Operating systems ###
+.DS_Store
+Thumbs.db
+
+### Environment and secrets ###
+.env
+.env.*
+!.env.example

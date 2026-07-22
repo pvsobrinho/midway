@@ -4,6 +4,7 @@ import com.midway.pix.domain.entity.Agendamento;
 import com.midway.pix.domain.entity.StatusAgendamento;
 import com.midway.pix.domain.entity.StatusRisco;
 import com.midway.pix.domain.repository.AgendamentoRepository;
+import com.midway.pix.shared.LogSeguro;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -30,47 +31,80 @@ public class AnaliseFraudeService {
 
     public ResultadoAnalise analisar(Agendamento agendamento) {
         ResultadoAnalise resultado;
-        Optional<String> motivoVolumeRecente = identificarVolumeRecente(agendamento);
+        Optional<Instant> bloqueioAtivo = buscarBloqueioAtivo(agendamento);
+        Optional<ResultadoAnalise> resultadoVolumeRecente = analisarVolumeRecente(agendamento);
 
-        if (agendamento.getValor().compareTo(LIMITE_REJEICAO) > 0) {
+        if (bloqueioAtivo.isPresent()) {
             resultado = new ResultadoAnalise(
                     StatusRisco.REJEITADO,
-                    "Valor acima do limite permitido"
+                    "Recebimentos deste pagador estão bloqueados temporariamente",
+                    bloqueioAtivo.get()
+            );
+        } else if (agendamento.getValor().compareTo(LIMITE_REJEICAO) > 0) {
+            resultado = new ResultadoAnalise(
+                    StatusRisco.REJEITADO,
+                    "Valor acima do limite permitido",
+                    null
             );
         } else if (existeAgendamentoSemelhante(agendamento)) {
             resultado = new ResultadoAnalise(
                     StatusRisco.REVISAO_MANUAL,
-                    "Existe outro agendamento com o mesmo pagador, destinatário, valor e data"
+                    "Existe outro agendamento com o mesmo pagador, destinatário, valor e data",
+                    null
             );
-        } else if (motivoVolumeRecente.isPresent()) {
+        } else if (possuiDoisAgendamentosNaMesmaData(agendamento)) {
             resultado = new ResultadoAnalise(
                     StatusRisco.REVISAO_MANUAL,
-                    motivoVolumeRecente.get()
+                    "Terceiro ou posterior agendamento para o mesmo destinatário e data",
+                    null
             );
+        } else if (resultadoVolumeRecente.isPresent()) {
+            resultado = resultadoVolumeRecente.get();
         } else if (agendamento.getValor().compareTo(LIMITE_REVISAO) > 0) {
             resultado = new ResultadoAnalise(
                     StatusRisco.REVISAO_MANUAL,
-                    "Valor requer revisão manual"
+                    "Valor requer revisão manual",
+                    null
             );
         } else if (duracaoSuperiorADoisAnos(agendamento)) {
             resultado = new ResultadoAnalise(
                     StatusRisco.REVISAO_MANUAL,
-                    "Período da recorrência superior a dois anos"
+                    "Período da recorrência superior a dois anos",
+                    null
             );
         } else {
             resultado = new ResultadoAnalise(
                     StatusRisco.APROVADO,
-                    "Nenhum indício de risco identificado"
+                    "Nenhum indício de risco identificado",
+                    null
             );
         }
 
-        LOGGER.info(
-                "Análise de risco concluída: agendamentoId={}, resultado={}, motivo={}",
-                agendamento.getId(),
-                resultado.status(),
-                resultado.motivo()
-        );
+        registrarResultado(agendamento, resultado);
         return resultado;
+    }
+
+    private void registrarResultado(Agendamento agendamento, ResultadoAnalise resultado) {
+        String mensagem = "Análise de risco: agendamentoId={}, idempotencyKey={}, pagador={}, recebedor={}, "
+                + "valor={}, primeiroPagamento={}, dataFim={}, resultado={}, motivo={}, bloqueadoAte={}";
+        Object[] dados = {
+                agendamento.getId(),
+                LogSeguro.mascarar(agendamento.getChaveIdempotencia()),
+                LogSeguro.mascarar(agendamento.getIdentificadorPagador()),
+                LogSeguro.mascarar(agendamento.getChavePixRecebedor()),
+                agendamento.getValor(),
+                agendamento.getDataPrimeiroPagamento(),
+                agendamento.getDataFim(),
+                resultado.status(),
+                resultado.motivo(),
+                resultado.bloqueadoAte()
+        };
+
+        if (resultado.status() == StatusRisco.APROVADO) {
+            LOGGER.info(mensagem, dados);
+        } else {
+            LOGGER.warn(mensagem, dados);
+        }
     }
 
     private boolean existeAgendamentoSemelhante(Agendamento novoAgendamento) {
@@ -80,7 +114,7 @@ public class AnaliseFraudeService {
                 .anyMatch(existente -> mesmoAgendamento(existente, novoAgendamento));
     }
 
-    private Optional<String> identificarVolumeRecente(Agendamento novoAgendamento) {
+    private Optional<ResultadoAnalise> analisarVolumeRecente(Agendamento novoAgendamento) {
         List<Agendamento> agendamentosRecentes = agendamentoRepository.buscarTodos().stream()
                 .filter(existente -> !existente.getId().equals(novoAgendamento.getId()))
                 .filter(this::estaEmAberto)
@@ -93,7 +127,11 @@ public class AnaliseFraudeService {
                 novoAgendamento.getCriadoEm().minus(JANELA_LONGA)
         );
         if (ultimaHora >= 9) {
-            return Optional.of("Dez ou mais agendamentos para o mesmo destinatário em 60 minutos");
+            return Optional.of(new ResultadoAnalise(
+                    StatusRisco.REVISAO_MANUAL,
+                    "Dez ou mais agendamentos para o mesmo destinatário em 60 minutos",
+                    novoAgendamento.getCriadoEm().plus(Duration.ofHours(24))
+            ));
         }
 
         long ultimosCincoMinutos = contarDesde(
@@ -101,10 +139,34 @@ public class AnaliseFraudeService {
                 novoAgendamento.getCriadoEm().minus(JANELA_CURTA)
         );
         if (ultimosCincoMinutos >= 3) {
-            return Optional.of("Quatro ou mais agendamentos para o mesmo destinatário em 5 minutos");
+            return Optional.of(new ResultadoAnalise(
+                    StatusRisco.REVISAO_MANUAL,
+                    "Quatro ou mais agendamentos para o mesmo destinatário em 5 minutos",
+                    null
+            ));
         }
 
         return Optional.empty();
+    }
+
+    private Optional<Instant> buscarBloqueioAtivo(Agendamento novoAgendamento) {
+        return agendamentoRepository.buscarTodos().stream()
+                .filter(existente -> mesmoPagadorERecebedor(existente, novoAgendamento))
+                .map(Agendamento::getBloqueadoAte)
+                .filter(java.util.Objects::nonNull)
+                .filter(bloqueadoAte -> bloqueadoAte.isAfter(novoAgendamento.getCriadoEm()))
+                .max(Instant::compareTo);
+    }
+
+    private boolean possuiDoisAgendamentosNaMesmaData(Agendamento novoAgendamento) {
+        return agendamentoRepository.buscarTodos().stream()
+                .filter(existente -> !existente.getId().equals(novoAgendamento.getId()))
+                .filter(this::estaEmAberto)
+                .filter(existente -> mesmoPagadorERecebedor(existente, novoAgendamento))
+                .filter(existente -> !existente.getCriadoEm().isAfter(novoAgendamento.getCriadoEm()))
+                .filter(existente -> existente.getDataPrimeiroPagamento()
+                        .equals(novoAgendamento.getDataPrimeiroPagamento()))
+                .count() >= 2;
     }
 
     private long contarDesde(List<Agendamento> agendamentos, Instant inicio) {
@@ -138,6 +200,6 @@ public class AnaliseFraudeService {
                 && agendamento.getDataFim().isAfter(agendamento.getDataPrimeiroPagamento().plusYears(2));
     }
 
-    public record ResultadoAnalise(StatusRisco status, String motivo) {
+    public record ResultadoAnalise(StatusRisco status, String motivo, Instant bloqueadoAte) {
     }
 }

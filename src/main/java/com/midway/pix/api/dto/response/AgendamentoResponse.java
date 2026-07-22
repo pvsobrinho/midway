@@ -22,6 +22,7 @@ public record AgendamentoResponse(
         StatusAgendamento status,
         StatusRisco statusRisco,
         String motivoAnalise,
+        Instant bloqueadoAte,
         Instant criadoEm,
         Instant atualizadoEm,
         Instant analisadoEm,

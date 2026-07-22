@@ -8,6 +8,9 @@ import java.util.UUID;
 
 public class Agendamento {
 
+    private static final String AGUARDANDO_ANALISE = "Aguardando processamento da análise antifraude";
+    private static final String AGUARDANDO_REVISAO = "Agendamento aguardando revisão manual";
+
     private final UUID id;
     private final String chaveIdempotencia;
     private final String identificadorPagador;
@@ -22,6 +25,7 @@ public class Agendamento {
     private StatusAgendamento status;
     private StatusRisco statusRisco;
     private String motivoAnalise;
+    private Instant bloqueadoAte;
     private Instant atualizadoEm;
     private Instant analisadoEm;
 
@@ -38,6 +42,7 @@ public class Agendamento {
             StatusAgendamento status,
             StatusRisco statusRisco,
             String motivoAnalise,
+            Instant bloqueadoAte,
             Instant criadoEm,
             Instant atualizadoEm,
             Instant analisadoEm
@@ -56,7 +61,8 @@ public class Agendamento {
         this.dataFim = dataFim;
         this.status = Objects.requireNonNull(status, "status não pode ser nulo");
         this.statusRisco = Objects.requireNonNull(statusRisco, "statusRisco não pode ser nulo");
-        this.motivoAnalise = motivoAnalise;
+        this.motivoAnalise = definirMotivoPendente(status, statusRisco, motivoAnalise);
+        this.bloqueadoAte = bloqueadoAte;
         this.criadoEm = Objects.requireNonNull(criadoEm, "criadoEm não pode ser nulo");
         this.atualizadoEm = Objects.requireNonNull(atualizadoEm, "atualizadoEm não pode ser nulo");
         this.analisadoEm = analisadoEm;
@@ -91,13 +97,19 @@ public class Agendamento {
                 StatusAgendamento.PENDENTE_ANALISE,
                 StatusRisco.PENDENTE,
                 null,
+                null,
                 criadoEm,
                 criadoEm,
                 null
         );
     }
 
-    public void registrarAnalise(StatusRisco resultado, String motivoAnalise, Instant analisadoEm) {
+    public void registrarAnalise(
+            StatusRisco resultado,
+            String motivoAnalise,
+            Instant bloqueadoAte,
+            Instant analisadoEm
+    ) {
         Objects.requireNonNull(resultado, "resultado da análise não pode ser nulo");
         if (resultado == StatusRisco.PENDENTE) {
             throw new IllegalArgumentException("resultado da análise não pode ser PENDENTE");
@@ -105,6 +117,7 @@ public class Agendamento {
 
         this.statusRisco = resultado;
         this.motivoAnalise = validarTexto(motivoAnalise, "motivoAnalise");
+        this.bloqueadoAte = bloqueadoAte;
         this.status = switch (resultado) {
             case APROVADO -> StatusAgendamento.ATIVO;
             case REJEITADO -> StatusAgendamento.REJEITADO;
@@ -163,6 +176,22 @@ public class Agendamento {
         return valor;
     }
 
+    private static String definirMotivoPendente(
+            StatusAgendamento status,
+            StatusRisco statusRisco,
+            String motivoAnalise
+    ) {
+        if (motivoAnalise != null && !motivoAnalise.isBlank()) {
+            return motivoAnalise;
+        }
+        if (status != StatusAgendamento.PENDENTE_ANALISE) {
+            return motivoAnalise;
+        }
+        return statusRisco == StatusRisco.REVISAO_MANUAL
+                ? AGUARDANDO_REVISAO
+                : AGUARDANDO_ANALISE;
+    }
+
     public UUID getId() {
         return id;
     }
@@ -209,6 +238,10 @@ public class Agendamento {
 
     public String getMotivoAnalise() {
         return motivoAnalise;
+    }
+
+    public Instant getBloqueadoAte() {
+        return bloqueadoAte;
     }
 
     public Instant getCriadoEm() {

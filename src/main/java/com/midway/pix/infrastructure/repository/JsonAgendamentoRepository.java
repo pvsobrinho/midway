@@ -132,6 +132,7 @@ public class JsonAgendamentoRepository implements AgendamentoRepository {
             StatusAgendamento status,
             StatusRisco statusRisco,
             String motivoAnalise,
+            Instant bloqueadoAte,
             Instant criadoEm,
             Instant atualizadoEm,
             Instant analisadoEm
@@ -151,6 +152,7 @@ public class JsonAgendamentoRepository implements AgendamentoRepository {
                     agendamento.getStatus(),
                     agendamento.getStatusRisco(),
                     agendamento.getMotivoAnalise(),
+                    agendamento.getBloqueadoAte(),
                     agendamento.getCriadoEm(),
                     agendamento.getAtualizadoEm(),
                     agendamento.getAnalisadoEm()
@@ -171,6 +173,7 @@ public class JsonAgendamentoRepository implements AgendamentoRepository {
                     status,
                     statusRisco,
                     motivoAnalise,
+                    bloqueadoAte,
                     criadoEm,
                     atualizadoEm,
                     analisadoEm

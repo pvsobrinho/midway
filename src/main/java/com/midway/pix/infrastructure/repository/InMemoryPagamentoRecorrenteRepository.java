@@ -1,11 +1,9 @@
 package com.midway.pix.infrastructure.repository;
 
 import com.midway.pix.domain.entity.PagamentoRecorrente;
-import com.midway.pix.domain.entity.StatusPagamento;
 import com.midway.pix.domain.repository.PagamentoRecorrenteRepository;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -41,18 +39,4 @@ public class InMemoryPagamentoRecorrenteRepository implements PagamentoRecorrent
                 .toList();
     }
 
-    @Override
-    public List<PagamentoRecorrente> buscarPorStatusEDataAgendadaAte(
-            StatusPagamento status,
-            LocalDate dataLimite
-    ) {
-        Objects.requireNonNull(status, "status não pode ser nulo");
-        Objects.requireNonNull(dataLimite, "dataLimite não pode ser nula");
-
-        return pagamentos.values().stream()
-                .filter(pagamento -> pagamento.getStatus() == status)
-                .filter(pagamento -> !pagamento.getDataAgendada().isAfter(dataLimite))
-                .sorted(Comparator.comparing(PagamentoRecorrente::getDataAgendada))
-                .toList();
-    }
 }

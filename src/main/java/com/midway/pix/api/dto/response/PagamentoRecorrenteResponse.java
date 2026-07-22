@@ -1,7 +1,5 @@
 package com.midway.pix.api.dto.response;
 
-import com.midway.pix.domain.entity.StatusPagamento;
-
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -12,13 +10,6 @@ public record PagamentoRecorrenteResponse(
         UUID agendamentoId,
         BigDecimal valor,
         LocalDate dataAgendada,
-        StatusPagamento status,
-        int numeroTentativas,
-        String codigoTransacaoPix,
-        String motivoFalha,
-        Instant criadoEm,
-        Instant atualizadoEm,
-        Instant enviadoEm,
-        Instant processadoEm
+        Instant criadoEm
 ) {
 }

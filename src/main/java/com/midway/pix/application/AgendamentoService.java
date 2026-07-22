@@ -114,7 +114,7 @@ public class AgendamentoService {
 
     private void marcarRevisaoManualPorFalhaDePublicacao(Agendamento agendamento, Throwable erro) {
         synchronized (agendamento) {
-            if (agendamento.getStatusRisco() != StatusRisco.PENDENTE) {
+            if (agendamento.getStatus() != StatusAgendamento.PENDENTE_ANALISE) {
                 return;
             }
 
@@ -167,14 +167,7 @@ public class AgendamentoService {
                 pagamento.getAgendamentoId(),
                 pagamento.getValor(),
                 pagamento.getDataAgendada(),
-                pagamento.getStatus(),
-                pagamento.getNumeroTentativas(),
-                pagamento.getCodigoTransacaoPix(),
-                pagamento.getMotivoFalha(),
-                pagamento.getCriadoEm(),
-                pagamento.getAtualizadoEm(),
-                pagamento.getEnviadoEm(),
-                pagamento.getProcessadoEm()
+                pagamento.getCriadoEm()
         );
     }
 
@@ -200,9 +193,7 @@ public class AgendamentoService {
         }
 
         boolean possuiAgendamentoAnterior = agendamentoRepository.buscarTodos().stream()
-                .filter(agendamento -> agendamento.getStatus() != StatusAgendamento.CANCELADO)
                 .filter(agendamento -> agendamento.getStatus() != StatusAgendamento.REJEITADO)
-                .filter(agendamento -> agendamento.getStatus() != StatusAgendamento.CONCLUIDO)
                 .anyMatch(agendamento -> agendamento.getIdentificadorPagador()
                         .equalsIgnoreCase(request.identificadorPagador())
                         && agendamento.getChavePixRecebedor()

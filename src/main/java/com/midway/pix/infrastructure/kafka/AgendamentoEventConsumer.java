@@ -2,6 +2,7 @@ package com.midway.pix.infrastructure.kafka;
 
 import com.midway.pix.domain.entity.Agendamento;
 import com.midway.pix.domain.entity.PagamentoRecorrente;
+import com.midway.pix.domain.entity.StatusAgendamento;
 import com.midway.pix.domain.entity.StatusRisco;
 import com.midway.pix.domain.repository.AgendamentoRepository;
 import com.midway.pix.domain.repository.PagamentoRecorrenteRepository;
@@ -50,7 +51,7 @@ public class AgendamentoEventConsumer {
     public void processar(AgendamentoSolicitadoEvent evento) {
         Agendamento agendamento = buscarAgendamento(evento.agendamentoId());
 
-        if (agendamento.getStatusRisco() != StatusRisco.PENDENTE) {
+        if (agendamento.getStatus() != StatusAgendamento.PENDENTE_ANALISE) {
             LOGGER.info(
                     "Evento ignorado por já ter sido processado: eventoId={}, agendamentoId={}, statusRisco={}",
                     evento.eventoId(),
@@ -92,7 +93,7 @@ public class AgendamentoEventConsumer {
     @DltHandler
     public void tratarDlt(AgendamentoSolicitadoEvent evento) {
         Agendamento agendamento = buscarAgendamento(evento.agendamentoId());
-        if (agendamento.getStatusRisco() == StatusRisco.PENDENTE) {
+        if (agendamento.getStatus() == StatusAgendamento.PENDENTE_ANALISE) {
             agendamento.registrarAnalise(
                     StatusRisco.REVISAO_MANUAL,
                     "Falha ao processar a análise antifraude",

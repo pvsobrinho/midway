@@ -60,7 +60,7 @@ public class Agendamento {
         );
         this.dataFim = dataFim;
         this.status = Objects.requireNonNull(status, "status não pode ser nulo");
-        this.statusRisco = Objects.requireNonNull(statusRisco, "statusRisco não pode ser nulo");
+        this.statusRisco = statusRisco;
         this.motivoAnalise = definirMotivoPendente(status, statusRisco, motivoAnalise);
         this.bloqueadoAte = bloqueadoAte;
         this.criadoEm = Objects.requireNonNull(criadoEm, "criadoEm não pode ser nulo");
@@ -95,7 +95,7 @@ public class Agendamento {
                 dataPrimeiroPagamento,
                 dataFim,
                 StatusAgendamento.PENDENTE_ANALISE,
-                StatusRisco.PENDENTE,
+                null,
                 null,
                 null,
                 criadoEm,
@@ -111,45 +111,19 @@ public class Agendamento {
             Instant analisadoEm
     ) {
         Objects.requireNonNull(resultado, "resultado da análise não pode ser nulo");
-        if (resultado == StatusRisco.PENDENTE) {
-            throw new IllegalArgumentException("resultado da análise não pode ser PENDENTE");
-        }
-
-        this.statusRisco = resultado;
-        this.motivoAnalise = validarTexto(motivoAnalise, "motivoAnalise");
-        this.bloqueadoAte = bloqueadoAte;
-        this.status = switch (resultado) {
+        String motivo = validarTexto(motivoAnalise, "motivoAnalise");
+        Instant instanteAnalise = validarInstante(analisadoEm);
+        StatusAgendamento novoStatus = switch (resultado) {
             case APROVADO -> StatusAgendamento.ATIVO;
             case REJEITADO -> StatusAgendamento.REJEITADO;
             case REVISAO_MANUAL -> StatusAgendamento.PENDENTE_ANALISE;
-            case PENDENTE -> throw new IllegalStateException("status de risco inválido");
         };
-        this.analisadoEm = validarInstante(analisadoEm);
-        this.atualizadoEm = this.analisadoEm;
-    }
-
-    public void pausar(Instant atualizadoEm) {
-        alterarStatus(StatusAgendamento.PAUSADO, atualizadoEm);
-    }
-
-    public void reativar(Instant atualizadoEm) {
-        if (statusRisco != StatusRisco.APROVADO) {
-            throw new IllegalStateException("somente agendamentos aprovados podem ser reativados");
-        }
-        alterarStatus(StatusAgendamento.ATIVO, atualizadoEm);
-    }
-
-    public void cancelar(Instant atualizadoEm) {
-        alterarStatus(StatusAgendamento.CANCELADO, atualizadoEm);
-    }
-
-    public void concluir(Instant atualizadoEm) {
-        alterarStatus(StatusAgendamento.CONCLUIDO, atualizadoEm);
-    }
-
-    private void alterarStatus(StatusAgendamento novoStatus, Instant atualizadoEm) {
+        this.statusRisco = resultado;
+        this.motivoAnalise = motivo;
+        this.bloqueadoAte = bloqueadoAte;
         this.status = novoStatus;
-        this.atualizadoEm = validarInstante(atualizadoEm);
+        this.analisadoEm = instanteAnalise;
+        this.atualizadoEm = instanteAnalise;
     }
 
     private Instant validarInstante(Instant instante) {

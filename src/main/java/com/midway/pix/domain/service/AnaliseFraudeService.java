@@ -176,9 +176,7 @@ public class AnaliseFraudeService {
     }
 
     private boolean estaEmAberto(Agendamento agendamento) {
-        return agendamento.getStatus() != StatusAgendamento.CANCELADO
-                && agendamento.getStatus() != StatusAgendamento.REJEITADO
-                && agendamento.getStatus() != StatusAgendamento.CONCLUIDO;
+        return agendamento.getStatus() != StatusAgendamento.REJEITADO;
     }
 
     private boolean mesmoAgendamento(Agendamento existente, Agendamento novoAgendamento) {

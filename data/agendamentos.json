@@ -134,4 +134,38 @@
   "criadoEm" : "2026-07-22T01:42:15.779366400Z",
   "atualizadoEm" : "2026-07-22T01:42:15.796939800Z",
   "analisadoEm" : "2026-07-22T01:42:15.796939800Z"
+}, {
+  "id" : "9af4677d-4687-4a13-842b-612d2e159adc",
+  "chaveIdempotencia" : "assinatura-cliente-13458",
+  "identificadorPagador" : "cliente-123",
+  "chavePixRecebedor" : "recebedor@exemplo.com",
+  "valor" : 7846,
+  "descricao" : "Mensalidade do serviço",
+  "periodicidade" : "MENSAL",
+  "dataPrimeiroPagamento" : "2026-08-01",
+  "dataFim" : "2027-08-01",
+  "status" : "PENDENTE_ANALISE",
+  "statusRisco" : "REVISAO_MANUAL",
+  "motivoAnalise" : "Existe outro agendamento com o mesmo pagador, destinatário, valor e data",
+  "bloqueadoAte" : null,
+  "criadoEm" : "2026-07-23T13:58:21.252449200Z",
+  "atualizadoEm" : "2026-07-23T13:58:21.573999800Z",
+  "analisadoEm" : "2026-07-23T13:58:21.573999800Z"
+}, {
+  "id" : "862c8fad-4b0a-4a2b-8a12-225c74427455",
+  "chaveIdempotencia" : "6atura-cliente-13458",
+  "identificadorPagador" : "cliente-123",
+  "chavePixRecebedor" : "recebedor@exemplo.com",
+  "valor" : 7846,
+  "descricao" : "Mensalidade do serviço",
+  "periodicidade" : "MENSAL",
+  "dataPrimeiroPagamento" : "2026-08-01",
+  "dataFim" : "2027-08-01",
+  "status" : "PENDENTE_ANALISE",
+  "statusRisco" : "REVISAO_MANUAL",
+  "motivoAnalise" : "Existe outro agendamento com o mesmo pagador, destinatário, valor e data",
+  "bloqueadoAte" : null,
+  "criadoEm" : "2026-07-23T14:07:01.576845900Z",
+  "atualizadoEm" : "2026-07-23T14:07:01.632280200Z",
+  "analisadoEm" : "2026-07-23T14:07:01.632280200Z"
 } ]
